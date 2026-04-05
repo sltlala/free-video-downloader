@@ -32,27 +32,68 @@
 
           <!-- 总结摘要 Tab -->
           <div v-show="activeTab === 'summary'">
-            <div
-              v-if="summaryText"
-              class="prose prose-slate prose-sm max-w-none summary-prose"
-              v-html="renderedSummary"
-            ></div>
-            <div v-if="loading && summaryText" class="mt-2 inline-flex items-center gap-1.5 text-xs text-text-muted">
-              <span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>
-              AI 正在生成中...
-            </div>
-            <!-- 免费用户剩余次数提示 -->
-            <div v-if="quotaInfo && quotaInfo.remaining >= 0 && !loading" class="mt-4 p-3 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-between">
-              <span class="text-sm text-blue-700">
-                今日剩余 AI 总结次数：<strong>{{ quotaInfo.remaining }}</strong> / {{ quotaInfo.limit }}
-              </span>
-              <button v-if="quotaInfo.remaining <= 1" @click="emit('need-vip')" class="text-xs font-medium text-primary hover:underline cursor-pointer">
-                升级 VIP 无限使用
-              </button>
+            <div v-if="summaryText" class="relative">
+              <!-- 工具栏 -->
+              <div class="flex items-center justify-end mb-3">
+                <div class="flex items-center gap-2">
+                  <!-- 下载总结按钮 -->
+                  <div class="relative" ref="summaryDropdownRef">
+                    <button
+                        @click="showSummaryDropdown = !showSummaryDropdown"
+                        class="flex items-center gap-1.5 text-xs text-primary hover:text-primary-dark transition-colors cursor-pointer px-2.5 py-1.5 rounded-lg hover:bg-primary-light"
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      下载总结
+                      <svg class="w-3 h-3 transition-transform" :class="showSummaryDropdown ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <div
+                        v-if="showSummaryDropdown"
+                        class="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-border-light py-1 z-10 min-w-[120px]"
+                    >
+                      <button
+                          @click="downloadSummary('md')"
+                          class="w-full text-left px-3 py-2 text-xs text-text-primary hover:bg-bg-section transition-colors cursor-pointer flex items-center justify-between"
+                      >
+                        <span>Markdown</span>
+                        <span class="text-text-muted">.md</span>
+                      </button>
+                      <button
+                          @click="downloadSummary('txt')"
+                          class="w-full text-left px-3 py-2 text-xs text-text-primary hover:bg-bg-section transition-colors cursor-pointer flex items-center justify-between"
+                      >
+                        <span>纯文本</span>
+                        <span class="text-text-muted">.txt</span>
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                      @click="copySummary"
+                      class="copy-summary-btn flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg text-primary hover:bg-primary-light transition-colors cursor-pointer"
+                      title="复制总结内容"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    复制
+                  </button>
+                </div>
+              </div>
+              <div
+                  class="prose prose-slate prose-sm max-w-none summary-prose"
+                  v-html="renderedSummary"
+              ></div>
+              <div v-if="loading && summaryText" class="mt-2 inline-flex items-center gap-1.5 text-xs text-text-muted">
+                <span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>
+                AI 正在生成中...
+              </div>
             </div>
           </div>
 
-          <!-- 字幕文本 Tab -->
+            <!-- 字幕文本 Tab -->
           <div v-show="activeTab === 'subtitle'">
             <div v-if="subtitleData.segments && subtitleData.segments.length > 0">
               <div class="flex items-center justify-between mb-4">
@@ -284,7 +325,7 @@ const props = defineProps({
   videoTitle: { type: String, default: '' },
   user: { type: Object, default: null },
 })
-const emit = defineEmits(['loading-change', 'need-login', 'need-vip'])
+const emit = defineEmits(['loading-change', 'need-login'])
 
 const tabs = [
   { key: 'summary', label: '总结摘要', icon: '📝' },
@@ -294,6 +335,73 @@ const tabs = [
 ]
 
 const activeTab = ref('summary')
+
+// 复制总结内容
+async function copySummary() {
+  if (!summaryText.value) return
+  try {
+    await navigator.clipboard.writeText(summaryText.value)
+    // 简单的反馈，实际项目中可以使用 Toast 组件
+    const btn = document.querySelector('.copy-summary-btn')
+    if (btn) {
+      const originalText = btn.innerHTML
+      btn.innerHTML = '<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>'
+      setTimeout(() => {
+        btn.innerHTML = originalText
+      }, 2000)
+    }
+  } catch (err) {
+    console.error('复制失败:', err)
+  }
+}
+
+// 下载总结文件
+function downloadSummary(format) {
+  showSummaryDropdown.value = false
+  if (!summaryText.value) return
+
+  let content = summaryText.value
+  let ext = format
+  const filename = getSafeFilename()
+
+  if (format === 'txt') {
+    // 将 Markdown 转换为纯文本（移除 Markdown 标记）
+    content = convertMarkdownToText(summaryText.value)
+  }
+
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+  triggerDownload(blob, `${filename} - 总结.${ext}`)
+}
+
+// 将 Markdown 转换为纯文本
+function convertMarkdownToText(markdown) {
+  if (!markdown) return ''
+
+  return markdown
+      // 移除标题标记
+      .replace(/^#{1,6}\s+/gm, '')
+      // 移除粗体和斜体
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/__(.*?)__/g, '$1')
+      .replace(/_(.*?)_/g, '$1')
+      // 移除链接，保留文本
+      .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+      // 移除图片
+      .replace(/!\[(.*?)\]\(.*?\)/g, '$1')
+      // 移除代码块标记
+      .replace(/[\s\S]*?/g, (match) => match.replace(/ /g, '').trim())
+      .replace(/(.*?)/g, '$1')
+      // 移除引用标记
+      .replace(/^>\s+/gm, '')
+      // 移除列表标记
+      .replace(/^[\s][-+]\s+/gm, '')
+      .replace(/^[\s]\d+.\s+/gm, '')
+      // 移除水平线
+      .replace(/^[-_]{3,}$/gm, '')
+      // 清理多余空行
+      .replace(/\n{3,}/g, '\n\n').trim()}
+
 const loading = ref(false)
 const loadingMessage = ref('正在提取视频字幕...')
 
@@ -314,6 +422,10 @@ const renderedSummary = ref('')
 
 // 思维导图全屏状态
 const isFullscreen = ref(false)
+
+// 总结下载下拉菜单
+const showSummaryDropdown = ref(false)
+const summaryDropdownRef = ref(null)
 
 // 字幕下载下拉菜单
 const showSubtitleDropdown = ref(false)
@@ -642,6 +754,9 @@ function handleClickOutside(e) {
   if (subtitleDropdownRef.value && !subtitleDropdownRef.value.contains(e.target)) {
     showSubtitleDropdown.value = false
   }
+  if (summaryDropdownRef.value && !summaryDropdownRef.value.contains(e.target)) {
+    showSummaryDropdown.value = false
+  }
 }
 
 const quotaInfo = ref(null)
@@ -650,7 +765,6 @@ async function startSummarize() {
   loading.value = true
   summaryText.value = ''
   mindmapMarkdown.value = ''
-  quotaInfo.value = null
   loadingMessage.value = '正在提取视频字幕...'
 
   try {
@@ -672,9 +786,6 @@ async function startSummarize() {
           mindmapMarkdown.value = parsed.markdown || ''
         } catch (e) { /* ignore parse error */ }
       },
-      quota: (data) => {
-        try { quotaInfo.value = JSON.parse(data) } catch {}
-      },
       done: () => {
         loading.value = false
       },
@@ -686,11 +797,10 @@ async function startSummarize() {
             emit('need-login')
             return
           }
-          if (parsed.need_vip) {
-            emit('need-vip')
-            return
+          // alert(parsed.message)
+          if (parsed.message && typeof parsed.message === 'string'){
+              alert('总结失败: ' +parsed.message)
           }
-          alert(parsed.message || '总结失败')
         } catch (e) {
           alert('总结失败: ' + data)
         }

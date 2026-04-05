@@ -56,6 +56,7 @@ class VideoDownloader:
         ydl_opts = {
             "quiet": True,
             "no_warnings": True,
+            "cookiesfrombrowser": ('firefox',),
             "extract_flat": False,
             "noplaylist": True,
         }
@@ -156,6 +157,7 @@ class VideoDownloader:
         ydl_opts = {
             "format": format_id,
             "outtmpl": os.path.join(self.DOWNLOAD_DIR, "%(title)s.%(ext)s"),
+            "cookiesfrombrowser": ('firefox',),
             "quiet": True,
             "no_warnings": True,
             "noplaylist": True,
@@ -200,6 +202,7 @@ class VideoDownloader:
         ydl_opts = {
             "format": format_id,
             "quiet": True,
+            "cookiesfrombrowser": ('firefox',),
             "no_warnings": True,
             "noplaylist": True,
         }

@@ -159,6 +159,7 @@ class SubtitleExtractor:
             "extract_flat": False,
             "writesubtitles": True,
             "writeautomaticsub": True,
+            "cookiesfrombrowser": ('firefox',),
             "skip_download": True,
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -220,6 +221,7 @@ class SubtitleExtractor:
                 "writeautomaticsub": sub_type == "auto",
                 "subtitleslangs": [lang],
                 "subtitlesformat": "vtt",
+                "cookiesfrombrowser": ('firefox',),
                 "outtmpl": os.path.join(tmp_dir, "subtitle"),
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
